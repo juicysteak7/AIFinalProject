@@ -30,7 +30,7 @@ pub fn read_file(file_path: &str) -> Result<String, std::io::Error> {
 }
 
 pub fn tokenize_paragraphs(text: &str) -> Vec<&str> {
-    text.split("\n\n").collect()
+    text.split("\r\n\r\n").collect()
 }
 
 pub fn extract_features(paragraph: &str) -> HashMap<String, u32> {
@@ -97,6 +97,7 @@ fn calculate_information_gain(data: &Dataset, attribute: &str) -> f64 {
 
 fn choose_best_attribute(data: &Dataset, attributes: &HashSet<String>) -> String {
     attributes.iter().max_by(|&a, &b| {
+        //println!("{:?},{:?}",a,b);
         calculate_information_gain(data, &a).partial_cmp(&calculate_information_gain(data, &b)).unwrap()
     }).cloned().unwrap_or_default()
 }
@@ -124,6 +125,7 @@ pub fn build_decision_tree(data: &Dataset, attributes: &HashSet<String>) -> Deci
     // Choose the best attribute to split on
     let best_attribute = choose_best_attribute(data, attributes);
 
+    //println!("{}",best_attribute);
     // Split the dataset based on the chosen attribute
     let mut subsets: HashMap<String, Dataset> = HashMap::new();
     for (i, feature) in data.features.iter().enumerate() {
@@ -162,7 +164,7 @@ pub fn predict_tree(node: &DecisionTreeNode, example: &HashMap<String, u32>) -> 
     }
 }
 
-fn validate_tree(tree: &DecisionTreeNode, validation_data: &Dataset) -> f64 {
+pub fn validate_tree(tree: &DecisionTreeNode, validation_data: &Dataset) -> f64 {
     let mut correct_predictions = 0;
 
     for (example, true_label) in validation_data.features.iter().zip(&validation_data.labels) {

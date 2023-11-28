@@ -1,48 +1,72 @@
 use Authorship;
 
+use std::env;
+
 
 fn main() {
-    println!("Hello, world!");
-    let fileContent = Authorship::read_file("./austen-northanger-abbey.txt");
+    let mut data_set:Authorship::Dataset = Authorship::Dataset {
+        features: Vec::new(),
+        labels: Vec::new(),
+    };
 
-    match fileContent {
+    let mut file_name = "./austen-northanger-abbey.txt";
+    let mut file_content = Authorship::read_file("./austen-northanger-abbey.txt");
+    match file_content {
         Ok(result) => {
             let tokenized_paragraphs = Authorship::tokenize_paragraphs(&result);
-            let mut data_set:Authorship::Dataset = Authorship::Dataset {
-                features: Vec::new(),
-                labels: Vec::new(),
-            };
+            let mut n = 0;
             for paragraph in tokenized_paragraphs {
-                data_set.features.push(Authorship::extract_features(&paragraph));
-                data_set.labels.push(Authorship::label_paragraph(&paragraph));
-                //println!("{:?}", Authorship::label_paragraph(&paragraph));
+                if n <= 1 {
+                    data_set.features.push(Authorship::extract_features(&paragraph));
+                    data_set.labels.push(Authorship::label_paragraph(&file_name));
+                }
+                n = n+1;
+                //println!("{}",paragraph);
+                //println!("{:?}", Authorship::label_paragraph(&file_name));
             }
-            let attributes = Authorship::get_attributes(&data_set);
-            let (train_set, val_set) = Authorship::split_dataset(&data_set, 0.7);
-            let decision_tree = Authorship::build_decision_tree(&train_set, &attributes);
-
-            // Make predictions on the validation set
-            let predictions = val_set
-            .features
-            .iter()
-            .map(|example| Authorship::predict_tree(&decision_tree, example))
-            .collect::<Vec<_>>();
-
-            // Evaluate and report accuracy
-            let correct_predictions = predictions
-            .iter()
-            .zip(&val_set.labels)
-            .filter(|(&pred, &actual)| pred == actual)
-            .count();
-
-            //println!("{}", correct_predictions);
-
-            let accuracy = correct_predictions as f64 / val_set.labels.len() as f64;
-            println!("Accuracy: {:.2}%", accuracy * 100.0);
-
         }
         Err(err) => {
-            println!("{}", err);
+            println!("{}",err);
         }
     }
+    file_name = "./shelley-frankenstein.txt";
+    file_content = Authorship::read_file("./shelley-frankenstein.txt");
+    match file_content {
+        Ok(result) => {
+            let tokenized_paragraphs = Authorship::tokenize_paragraphs(&result);
+            let mut n = 0;
+            for paragraph in tokenized_paragraphs {
+                if n <= 1 {
+                    data_set.features.push(Authorship::extract_features(&paragraph));
+                    data_set.labels.push(Authorship::label_paragraph(&file_name));
+                }
+                n = n+1;
+                //println!("{}",paragraph);
+                //println!("{:?}", Authorship::label_paragraph(&file_name));
+            }
+        }
+        Err(err) => {
+            println!("{}",err);
+        }
+    }
+
+    let mut shelley_num = 0;
+    let mut austen_num = 0;
+    for label in &data_set.labels {
+        if *label == Authorship::Author::Austen {
+            austen_num += 1;
+        } else {
+            shelley_num += 1;
+        }
+    }
+    println!("shelly: {}, austen: {}", shelley_num, austen_num);
+
+
+    let attributes = Authorship::get_attributes(&data_set);
+    println!("{}",attributes.len());
+    let (train_set, val_set) = Authorship::split_dataset(&data_set, 0.5);
+    let decision_tree = Authorship::build_decision_tree(&train_set, &attributes);
+    let accuracy = Authorship::validate_tree(&decision_tree, &val_set);
+    println!("Accuracy: {:.2}%", accuracy * 100.0);
+
 }
