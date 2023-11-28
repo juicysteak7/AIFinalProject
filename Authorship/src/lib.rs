@@ -30,14 +30,46 @@ pub fn read_file(file_path: &str) -> Result<String, std::io::Error> {
 }
 
 pub fn tokenize_paragraphs(text: &str) -> Vec<&str> {
-    text.split("\r\n\r\n").collect()
+    text.split("\n\n").collect()
 }
+
+// pub fn extract_features(paragraph: &str) -> HashMap<String, u32> {
+//     let mut features = HashMap::new();
+//     for mut word in paragraph.split_whitespace() {
+//         let length = word.len();
+//         if word.chars().nth(0).unwrap() == '"' {
+//             *features.entry(word.chars().nth(1).expect("REASON").to_string()).or_insert(0) += 1;
+//         } else if word.chars().nth(length).unwrap() == '.' {
+//             word = word.split(length).collect();
+//             println!("{:?}",word);
+//             *features.entry(word.to_string()).or_insert(0) += 1;
+//         }
+//     }
+//     features
+// }
 
 pub fn extract_features(paragraph: &str) -> HashMap<String, u32> {
     let mut features = HashMap::new();
-    for word in paragraph.split_whitespace() {
-        *features.entry(word.to_string()).or_insert(0) += 1;
+
+    for mut word in paragraph.split_whitespace() {
+        let length = word.len();
+
+        if word.starts_with('"') {
+            // Handle words starting with double quotes
+            if length > 1 {
+                *features.entry(word.chars().nth(1).unwrap().to_string()).or_insert(0) += 1;
+            }
+        } else if word.ends_with('.') {
+            // Handle words ending with a period
+            word = word[..length - 1].to_owned(); // Remove the period
+            println!("{:?}", word);
+            *features.entry(word.clone()).or_insert(0) += 1;
+        } else {
+            // Handle other words
+            *features.entry(word.to_string()).or_insert(0) += 1;
+        }
     }
+
     features
 }
 
@@ -52,16 +84,13 @@ pub fn label_paragraph(file_name: &str) -> Author {
 fn calculate_entropy(labels: &[Author]) -> f64 {
     let total_samples = labels.len() as f64;
 
-    // Count the occurrences of each class
     let class_counts: HashMap<Author, usize> = labels.iter().fold(HashMap::new(), |mut counts, &class_label| {
-        *counts.entry(class_label).or_insert(0) += 1;
+        counts.entry(class_label).and_modify(|count| *count += 1).or_insert(1);
         counts
     });
 
-    // Calculate entropy
     let entropy = class_counts.values().fold(0.0, |acc, &count| {
-        let probability = count as f64 / total_samples;
-        acc - probability * probability.log2()
+        acc - (count as f64 / total_samples) * (count as f64 / total_samples).log2()
     });
 
     entropy
@@ -91,6 +120,7 @@ fn calculate_information_gain(data: &Dataset, attribute: &str) -> f64 {
         entropy_sum += probability * subset_entropy;
     }
 
+    //println!("{}", entropy_s - entropy_sum);
     // Information Gain
     entropy_s - entropy_sum
 }

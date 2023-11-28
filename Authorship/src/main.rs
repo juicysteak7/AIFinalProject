@@ -16,7 +16,7 @@ fn main() {
             let tokenized_paragraphs = Authorship::tokenize_paragraphs(&result);
             let mut n = 0;
             for paragraph in tokenized_paragraphs {
-                if n <= 1 {
+                if n <= 3 {
                     data_set.features.push(Authorship::extract_features(&paragraph));
                     data_set.labels.push(Authorship::label_paragraph(&file_name));
                 }
@@ -29,14 +29,14 @@ fn main() {
             println!("{}",err);
         }
     }
-    file_name = "./shelley-frankenstein.txt";
+    file_name = "./shelley-the-last-man.txt";
     file_content = Authorship::read_file("./shelley-frankenstein.txt");
     match file_content {
         Ok(result) => {
             let tokenized_paragraphs = Authorship::tokenize_paragraphs(&result);
             let mut n = 0;
             for paragraph in tokenized_paragraphs {
-                if n <= 1 {
+                if n <= 3 {
                     data_set.features.push(Authorship::extract_features(&paragraph));
                     data_set.labels.push(Authorship::label_paragraph(&file_name));
                 }
@@ -64,6 +64,9 @@ fn main() {
 
     let attributes = Authorship::get_attributes(&data_set);
     println!("{}",attributes.len());
+    for att in &attributes {
+        println!("{}", att);
+    }
     let (train_set, val_set) = Authorship::split_dataset(&data_set, 0.5);
     let decision_tree = Authorship::build_decision_tree(&train_set, &attributes);
     let accuracy = Authorship::validate_tree(&decision_tree, &val_set);
