@@ -9,6 +9,7 @@ fn main() {
         labels: Vec::new(),
     };
 
+    let num_of_paragraphs = 10;
     let mut file_name = "./austen-northanger-abbey.txt";
     let mut file_content = Authorship::read_file("./austen-northanger-abbey.txt");
     match file_content {
@@ -16,13 +17,11 @@ fn main() {
             let tokenized_paragraphs = Authorship::tokenize_paragraphs(&result);
             let mut n = 0;
             for paragraph in tokenized_paragraphs {
-                if n <= 3 {
+                if n < num_of_paragraphs {
                     data_set.features.push(Authorship::extract_features(&paragraph));
                     data_set.labels.push(Authorship::label_paragraph(&file_name));
                 }
                 n = n+1;
-                //println!("{}",paragraph);
-                //println!("{:?}", Authorship::label_paragraph(&file_name));
             }
         }
         Err(err) => {
@@ -36,13 +35,11 @@ fn main() {
             let tokenized_paragraphs = Authorship::tokenize_paragraphs(&result);
             let mut n = 0;
             for paragraph in tokenized_paragraphs {
-                if n <= 3 {
+                if n < num_of_paragraphs {
                     data_set.features.push(Authorship::extract_features(&paragraph));
                     data_set.labels.push(Authorship::label_paragraph(&file_name));
                 }
                 n = n+1;
-                //println!("{}",paragraph);
-                //println!("{:?}", Authorship::label_paragraph(&file_name));
             }
         }
         Err(err) => {
@@ -61,15 +58,29 @@ fn main() {
     }
     println!("shelly: {}, austen: {}", shelley_num, austen_num);
 
-
-    let attributes = Authorship::get_attributes(&data_set);
-    println!("{}",attributes.len());
-    for att in &attributes {
-        println!("{}", att);
+    let old_data = data_set.clone();
+    let folds = 3;
+    let mut overall_accuracy = 0.0;
+    for fold in 0..folds {
+        //let mut attributes = Authorship::get_attributes(&data_set);
+        let (train_set, val_set) = Authorship::split_dataset(&data_set, 0.5);
+        //println!("{:?}",train_set);
+        let mut attributes = Authorship::get_attributes(&train_set);
+        println!("{}",attributes.len());
+        // for att in &attributes {
+        //     println!("{}", att);
+        // }
+        // for feature in &train_set.features {
+        //     for (word,value) in feature {
+        //         println!("{}: {}", word, value);
+        //     }
+        // }
+        let decision_tree = Authorship::build_decision_tree(&train_set, &mut attributes, 40);
+        println!("{:?}",decision_tree);
+        let accuracy = Authorship::validate_tree(&decision_tree, &val_set);
+        println!("Fold {} Accuracy: {:.2}%", fold+1, accuracy * 100.0);
+        data_set = old_data.clone();
+        overall_accuracy += accuracy;
     }
-    let (train_set, val_set) = Authorship::split_dataset(&data_set, 0.5);
-    let decision_tree = Authorship::build_decision_tree(&train_set, &attributes);
-    let accuracy = Authorship::validate_tree(&decision_tree, &val_set);
-    println!("Accuracy: {:.2}%", accuracy * 100.0);
-
+    println!("Overall Accuracy: {:.2}%", (overall_accuracy/folds as f64) * 100.0);
 }

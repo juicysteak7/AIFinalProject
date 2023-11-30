@@ -20,6 +20,7 @@ pub enum DecisionTreeNode {
     },
 }
 
+#[derive(Debug, Clone)]
 pub struct Dataset {
     pub features: Vec<HashMap<String, u32>>,
     pub labels: Vec<Author>,
@@ -33,41 +34,29 @@ pub fn tokenize_paragraphs(text: &str) -> Vec<&str> {
     text.split("\n\n").collect()
 }
 
-// pub fn extract_features(paragraph: &str) -> HashMap<String, u32> {
-//     let mut features = HashMap::new();
-//     for mut word in paragraph.split_whitespace() {
-//         let length = word.len();
-//         if word.chars().nth(0).unwrap() == '"' {
-//             *features.entry(word.chars().nth(1).expect("REASON").to_string()).or_insert(0) += 1;
-//         } else if word.chars().nth(length).unwrap() == '.' {
-//             word = word.split(length).collect();
-//             println!("{:?}",word);
-//             *features.entry(word.to_string()).or_insert(0) += 1;
-//         }
-//     }
-//     features
-// }
-
 pub fn extract_features(paragraph: &str) -> HashMap<String, u32> {
     let mut features = HashMap::new();
 
-    for mut word in paragraph.split_whitespace() {
-        let length = word.len();
-
-        if word.starts_with('"') {
-            // Handle words starting with double quotes
-            if length > 1 {
-                *features.entry(word.chars().nth(1).unwrap().to_string()).or_insert(0) += 1;
+    for word in paragraph.split_whitespace() {
+        if word.contains("-") {
+            continue;
+            let words = word.split("-");
+            for word in words {
+                if word.len() > 0 {
+                    *features.entry(word.to_string()).or_insert(0) += 1;
+                }
             }
-        } else if word.ends_with('.') {
-            // Handle words ending with a period
-            word = word[..length - 1].to_owned(); // Remove the period
-            println!("{:?}", word);
-            *features.entry(word.clone()).or_insert(0) += 1;
-        } else {
-            // Handle other words
-            *features.entry(word.to_string()).or_insert(0) += 1;
+        } else if word.contains("—") {
+            continue;
+            let words = word.split("—");
+            for word in words {
+                if word.len() > 0 {
+                    *features.entry(word.to_string()).or_insert(0) += 1;
+                }
+            }
         }
+        let word = word.to_lowercase().replace('.',"").replace(',',"").replace(":","").replace("?","").replace(";","").replace("!","").replace("”","").replace("“","").replace("_","").replace("’","");
+        *features.entry(word.to_string()).or_insert(0) += 1;
     }
 
     features
@@ -132,7 +121,7 @@ fn choose_best_attribute(data: &Dataset, attributes: &HashSet<String>) -> String
     }).cloned().unwrap_or_default()
 }
 
-pub fn build_decision_tree(data: &Dataset, attributes: &HashSet<String>) -> DecisionTreeNode {
+pub fn build_decision_tree(data: &Dataset, attributes: &mut HashSet<String>, depth: u32) -> DecisionTreeNode {
     // If all examples in the subset have the same class label, return a leaf node
     if data.labels.iter().all(|&label| label == Author::Austen) {
         return DecisionTreeNode::Leaf { class_label: Author::Austen };
@@ -141,7 +130,7 @@ pub fn build_decision_tree(data: &Dataset, attributes: &HashSet<String>) -> Deci
     }
 
     // If there are no more attributes to split on, return a leaf node with the majority class label
-    if attributes.is_empty() {
+    if attributes.is_empty() || depth == 0 {
         let majority_class = data.labels.iter().cloned().fold(None, |acc, label| {
             match acc {
                 None => Some(label),
@@ -153,13 +142,30 @@ pub fn build_decision_tree(data: &Dataset, attributes: &HashSet<String>) -> Deci
     }
 
     // Choose the best attribute to split on
-    let best_attribute = choose_best_attribute(data, attributes);
+    let mut best_attribute = choose_best_attribute(data, attributes);
+
+    attributes.remove(&best_attribute);
+
 
     //println!("{}",best_attribute);
     // Split the dataset based on the chosen attribute
     let mut subsets: HashMap<String, Dataset> = HashMap::new();
     for (i, feature) in data.features.iter().enumerate() {
         let value = feature.get(&best_attribute).map(|v| v.to_string()).unwrap_or_default();
+        // let mut value:String = String::new();
+        // while !attributes.is_empty() {
+        //     if let Some(result) = feature.get(&best_attribute) {
+        //         value=result.to_string();
+        //         // attributes.remove(&best_attribute);
+        //         // println!("{}: {}", best_attribute, value);
+        //         break;
+        //     } else {
+        //         best_attribute = choose_best_attribute(data, attributes);
+        //         attributes.remove(&best_attribute);
+        //     }
+        // }
+
+        // println!("{}: {}", best_attribute, value);
         subsets.entry(value.clone()).or_insert_with(|| Dataset {
             features: Vec::new(),
             labels: Vec::new(),
@@ -170,7 +176,7 @@ pub fn build_decision_tree(data: &Dataset, attributes: &HashSet<String>) -> Deci
     // Recursively build child nodes
     let mut children: HashMap<String, DecisionTreeNode> = HashMap::new();
     for (value, subset) in subsets {
-        children.insert(value, build_decision_tree(&subset, &attributes));
+        children.insert(value, build_decision_tree(&subset, attributes, depth - 1));
     }
 
     DecisionTreeNode::Internal {
@@ -184,9 +190,11 @@ pub fn predict_tree(node: &DecisionTreeNode, example: &HashMap<String, u32>) -> 
         DecisionTreeNode::Internal { attribute, children } => {
             let value = example.get(attribute).map(|v| v.to_string()).unwrap_or_default();
             if let Some(child) = children.get(&value) {
+                // println!("Here 1");
                 predict_tree(child, example)
             } else {
                 // If the attribute value is not found, return a default class label (Austen in this case)
+                // println!("Here 2");
                 Author::Austen
             }
         }
