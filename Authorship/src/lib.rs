@@ -90,12 +90,27 @@ fn calculate_entropy(labels: &[Author]) -> f64 {
 
 // Need to loop on features and check word frequences based on number of total features
 fn calculate_information_gain(data: &Dataset, attribute: &str, att_val: u32) -> f64 {
-    if att_val > 200 {
-        return att_val as f64 / 1000.0;
-    } else if att_val > 100 {
-        return att_val as f64 / 50.0;
+    // if att_val > 200 {
+    //     return att_val as f64 / 1000.0;
+    // } else if att_val > 100 {
+    //     return att_val as f64 / 50.0;
+    // }
+    let mut shelley_val = 0;
+    let mut austen_val = 0;
+    for i in 0..data.features.len() { 
+        if let Some(result) = data.features[i].get(attribute) {
+            if data.labels[i] == Author::Austen {
+                austen_val+=result;
+            } else {
+                shelley_val+=result;
+            }
+        }
     }
-    att_val as f64
+    let result = shelley_val as f64 - austen_val as f64;
+    if result < 0.0 {
+        return -result;
+    }
+    result
 }
 
 // fn calculate_information_gain(data: &Dataset, attribute: &str, att_freq: u32) -> f64 {

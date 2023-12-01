@@ -9,7 +9,7 @@ fn main() {
         labels: Vec::new(),
     };
 
-    let num_of_paragraphs = 500000;
+    let num_of_paragraphs = 20;
     let mut file_name = "./austen-northanger-abbey.txt";
     let mut file_content = Authorship::read_file("./austen-northanger-abbey.txt");
     match file_content {
@@ -114,7 +114,7 @@ fn main() {
         //         println!("{}: {}", word, value);
         //     }
         // }
-        let decision_tree = Authorship::build_decision_tree(&train_set, &mut attributes, 10);
+        let decision_tree = Authorship::build_decision_tree(&train_set, &mut attributes, 20);
         //println!("{:?}",decision_tree);
         let accuracy = Authorship::validate_tree(&decision_tree, &val_set);
         println!("Fold {} Accuracy: {:.2}%", fold+1, accuracy * 100.0);
