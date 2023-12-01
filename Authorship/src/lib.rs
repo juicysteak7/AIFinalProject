@@ -43,7 +43,7 @@ pub fn extract_features(paragraph: &str) -> HashMap<String, u32> {
             let words = word.split("-");
             for word in words {
                 if word.len() > 0 {
-                    if word != "." {
+                    if word != "." && word != "—" && word != "," {
                         *features.entry(word.to_string()).or_insert(0) += 1;
                     }
                 }
@@ -52,13 +52,13 @@ pub fn extract_features(paragraph: &str) -> HashMap<String, u32> {
             let words = word.split("—");
             for word in words {
                 if word.len() > 0 {
-                    if word != "." {
+                    if word != "." && word != "—" && word != "," {
                         *features.entry(word.to_string()).or_insert(0) += 1;
                     }
                 }
             }
         }
-        let word = word.to_lowercase().replace('.',"").replace(',',"").replace(":","").replace("?","").replace(";","").replace("!","").replace("”","").replace("“","").replace("_","").replace("’","");
+        let word = word.to_lowercase().replace('.',"").replace(',',"").replace(":","").replace("?","").replace(";","").replace("!","").replace("”","").replace("“","").replace("_","").replace("’","").replace("\"","");
         *features.entry(word.to_string()).or_insert(0) += 1;
     }
 
@@ -73,20 +73,20 @@ pub fn label_paragraph(file_name: &str) -> Author {
     }
 }
 
-fn calculate_entropy(labels: &[Author]) -> f64 {
-    let total_samples = labels.len() as f64;
+// fn calculate_entropy(labels: &[Author]) -> f64 {
+//     let total_samples = labels.len() as f64;
 
-    let class_counts: HashMap<Author, usize> = labels.iter().fold(HashMap::new(), |mut counts, &class_label| {
-        counts.entry(class_label).and_modify(|count| *count += 1).or_insert(1);
-        counts
-    });
+//     let class_counts: HashMap<Author, usize> = labels.iter().fold(HashMap::new(), |mut counts, &class_label| {
+//         counts.entry(class_label).and_modify(|count| *count += 1).or_insert(1);
+//         counts
+//     });
 
-    let entropy = class_counts.values().fold(0.0, |acc, &count| {
-        acc - (count as f64 / total_samples) * (count as f64 / total_samples).log2()
-    });
+//     let entropy = class_counts.values().fold(0.0, |acc, &count| {
+//         acc - (count as f64 / total_samples) * (count as f64 / total_samples).log2()
+//     });
 
-    entropy
-}
+//     entropy
+// }
 
 // Need to loop on features and check word frequences based on number of total features
 fn calculate_information_gain(data: &Dataset, attribute: &str, att_val: u32) -> f64 {
@@ -95,63 +95,48 @@ fn calculate_information_gain(data: &Dataset, attribute: &str, att_val: u32) -> 
     // } else if att_val > 100 {
     //     return att_val as f64 / 50.0;
     // }
-    let mut shelley_val = 0;
-    let mut austen_val = 0;
+    let mut shelley_val = 0.0;
+    let mut austen_val = 0.0;
     for i in 0..data.features.len() { 
-        if let Some(result) = data.features[i].get(attribute) {
+        let mut num_of_words_austen = 0;
+        let mut num_of_words_shelley = 0;
+        for (word,value) in &data.features[i] {
             if data.labels[i] == Author::Austen {
-                austen_val+=result;
+                num_of_words_austen+=value;
+                if word == attribute {
+                    austen_val+=*value as f64;
+                }
             } else {
-                shelley_val+=result;
+                num_of_words_shelley+=value;
+                if word == attribute {
+                    shelley_val+=*value as f64;
+                }
             }
         }
+        if shelley_val != 0.0 && num_of_words_shelley != 0 {
+            shelley_val = shelley_val / num_of_words_shelley as f64;
+        }
+        if austen_val != 0.0 && num_of_words_austen != 0 {
+            austen_val = austen_val / num_of_words_austen as f64;
+        }
+        // if let Some(result) = data.features[i].get(attribute) {
+        //     if data.labels[i] == Author::Austen {
+        //         austen_val+=result;
+        //     } else {
+        //         shelley_val+=result;
+        //     }
+        // }
     }
     let result = shelley_val as f64 - austen_val as f64;
+    //println!("{}",result);
     if result < 0.0 {
         return -result;
     }
     result
 }
 
-// fn calculate_information_gain(data: &Dataset, attribute: &str, att_freq: u32) -> f64 {
-//     let total_samples = data.labels.len() as f64;
-//     let entropy_s = calculate_entropy(&data.labels);
 
-//     // Calculate weighted sum of entropies for each value of the attribute
-//     let mut entropy_sum = 0.0;
-//     let values: HashSet<&String> = data.features.iter().flat_map(|feature| feature.keys()).collect();
-
-//     for value in values {
-//         // Filter the data for samples where the attribute has the specific value
-//         let subset_indices: Vec<usize> = data.features.iter()
-//             .enumerate()
-//             .filter(|(_, feature)| feature.get(attribute) == Some(value))
-//             .map(|(i, _)| i)
-//             .collect();
-
-//         // Calculate word frequencies for the subset
-//         let mut word_frequencies: HashMap<String, u32> = HashMap::new();
-//         for &i in &subset_indices {
-//             for (word, &freq) in &data.features[i] {
-//                 *word_frequencies.entry(word.clone()).or_insert(0) += freq;
-//             }
-//         }
-
-//         // Convert word frequencies to labels for the subset
-//         let subset_labels: Vec<Author> = subset_indices.iter().map(|&i| data.labels[i]).collect();
-//         let subset_entropy = calculate_entropy_with_word_frequencies(&subset_labels, &word_frequencies);
-
-//         // Weighted sum
-//         let probability = subset_indices.len() as f64 / total_samples;
-//         entropy_sum += probability * subset_entropy;
-//     }
-
-//     // Information Gain
-//     entropy_s - entropy_sum
-// }
-
-
-// fn calculate_information_gain(data: &Dataset, attribute: &str) -> f64 {
+// fn calculate_information_gain(data: &Dataset, attribute: &str, att_val: u32) -> f64 {
 //     let total_samples = data.labels.len() as f64;
 //     let entropy_s = calculate_entropy(&data.labels);
 
@@ -180,8 +165,9 @@ fn calculate_information_gain(data: &Dataset, attribute: &str, att_val: u32) -> 
 //     entropy_s - entropy_sum
 // }
 
+// Might attach word frequence with attribute to cross refrence when predicting tree
 fn choose_best_attribute(data: &Dataset, attributes: &HashMap<String, u32>) -> String {
-    attributes.iter().min_by(|&(a_word, a_val), &(b_word, b_val)| {
+    attributes.iter().max_by(|&(a_word, a_val), &(b_word, b_val)| {
         calculate_information_gain(data, a_word, *a_val).partial_cmp(&calculate_information_gain(data, b_word, *b_val)).unwrap_or(Ordering::Equal)
     }).map(|(word, _)| word.clone()).unwrap_or_default()
 }
@@ -189,7 +175,7 @@ fn choose_best_attribute(data: &Dataset, attributes: &HashMap<String, u32>) -> S
 // fn choose_best_attribute(data: &Dataset, attributes: &HashMap<String,u32>) -> String {
 //     attributes.iter().max_by(|&(a_word,a_val), &(b_word,b_val)| {
 
-//         calculate_information_gain(data, &a).partial_cmp(&calculate_information_gain(data, &b)).unwrap()
+//         calculate_information_gain(data, &a_word).partial_cmp(&calculate_information_gain(data, &b_word)).unwrap()
 //     }).cloned().unwrap_or_default()
 // }
 
@@ -265,7 +251,7 @@ pub fn predict_tree(node: &DecisionTreeNode, example: &HashMap<String, u32>, wor
             if let Some(value) = example.get(attribute) {
                 if let Some(child) = children.get(&value) {
                     // println!("Here 1");
-                    predict_tree(child, example, word_occurances + 1)
+                    predict_tree(child, example, word_occurances)
                 } else {
                     // If the attribute value is not found, return a default class label (Austen in this case)
                     // println!("Here 2");
@@ -316,11 +302,19 @@ pub fn get_attributes(data: &Dataset) -> HashMap<String,u32> {
 
     for feature in &data.features {
         for (word, value) in feature {
-            if let Some(result) = unique_words.get(word) {
-                unique_words.insert(word.clone(), result + value);
-            } else {
-                unique_words.insert(word.clone(), *value);
+            if word != "the" && word != "and" && word != "of" && word != "my" && word != "to" && word != "i" && word != "his" && word != "a" && word != "that" && word != "—" {
+                if let Some(result) = unique_words.get(word) {
+                    unique_words.insert(word.clone(), result + value);
+                } else {
+                    unique_words.insert(word.clone(), *value);
+                }
+
             }
+            // if let Some(result) = unique_words.get(word) {
+            //     unique_words.insert(word.clone(), result + value);
+            // } else {
+            //     unique_words.insert(word.clone(), *value);
+            // }
         }
     }
 

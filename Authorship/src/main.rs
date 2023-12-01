@@ -9,7 +9,7 @@ fn main() {
         labels: Vec::new(),
     };
 
-    let num_of_paragraphs = 20;
+    let num_of_paragraphs = 40;
     let mut file_name = "./austen-northanger-abbey.txt";
     let mut file_content = Authorship::read_file("./austen-northanger-abbey.txt");
     match file_content {
@@ -99,13 +99,13 @@ fn main() {
     let mut overall_accuracy = 0.0;
     for fold in 0..folds {
         //let mut attributes = Authorship::get_attributes(&data_set);
-        let (train_set, val_set) = Authorship::split_dataset(&data_set, 0.7);
+        let (train_set, val_set) = Authorship::split_dataset(&data_set, 0.5);
         //println!("{:?}",train_set);
         let mut attributes = Authorship::get_attributes(&train_set);
-        println!("{}",attributes.len());
-        if let Some(value) = attributes.get("the") {
-            println!("the: {}",value);
-        }
+        //println!("{}",attributes.len());
+        // if let Some(value) = attributes.get("the") {
+        //     println!("the: {}",value);
+        // }
         // for (word, freq) in &attributes {
         //     println!("{}: {}", word, freq);
         // }
@@ -114,8 +114,8 @@ fn main() {
         //         println!("{}: {}", word, value);
         //     }
         // }
-        let decision_tree = Authorship::build_decision_tree(&train_set, &mut attributes, 20);
-        //println!("{:?}",decision_tree);
+        let decision_tree = Authorship::build_decision_tree(&train_set, &mut attributes, 5);
+        println!("{:?}",decision_tree);
         let accuracy = Authorship::validate_tree(&decision_tree, &val_set);
         println!("Fold {} Accuracy: {:.2}%", fold+1, accuracy * 100.0);
         data_set = old_data.clone();
