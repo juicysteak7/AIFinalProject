@@ -2,6 +2,7 @@ use std::fs;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use rand::seq::SliceRandom;
+use std::cmp::Ordering;
 
 #[derive(Clone,Copy,Debug,PartialEq,Eq,Hash)]
 pub enum Author {
@@ -13,7 +14,7 @@ pub enum Author {
 pub enum DecisionTreeNode {
     Internal {
         attribute: String,
-        children: HashMap<String,DecisionTreeNode>,
+        children: HashMap<u32,DecisionTreeNode>,
     },
     Leaf {
         class_label: Author,
@@ -39,19 +40,21 @@ pub fn extract_features(paragraph: &str) -> HashMap<String, u32> {
 
     for word in paragraph.split_whitespace() {
         if word.contains("-") {
-            continue;
             let words = word.split("-");
             for word in words {
                 if word.len() > 0 {
-                    *features.entry(word.to_string()).or_insert(0) += 1;
+                    if word != "." {
+                        *features.entry(word.to_string()).or_insert(0) += 1;
+                    }
                 }
             }
         } else if word.contains("—") {
-            continue;
             let words = word.split("—");
             for word in words {
                 if word.len() > 0 {
-                    *features.entry(word.to_string()).or_insert(0) += 1;
+                    if word != "." {
+                        *features.entry(word.to_string()).or_insert(0) += 1;
+                    }
                 }
             }
         }
@@ -85,43 +88,97 @@ fn calculate_entropy(labels: &[Author]) -> f64 {
     entropy
 }
 
-fn calculate_information_gain(data: &Dataset, attribute: &str) -> f64 {
-    let total_samples = data.labels.len() as f64;
-    let entropy_s = calculate_entropy(&data.labels);
-
-    // Calculate weighted sum of entropies for each value of the attribute
-    let mut entropy_sum = 0.0;
-    let values: HashSet<&String> = data.features.iter().flat_map(|feature| feature.keys()).collect();
-
-    for value in values {
-        // Filter the data for samples where the attribute has the specific value
-        let subset_indices: Vec<usize> = data.features.iter()
-            .enumerate()
-            .filter(|(_, feature)| feature.get(attribute).map(|v| v.to_string()) == Some(value.to_string()))
-            .map(|(i, _)| i)
-            .collect();
-
-        let subset_labels: Vec<Author> = subset_indices.iter().map(|&i| data.labels[i]).collect();
-        let subset_entropy = calculate_entropy(&subset_labels);
-
-        // Weighted sum
-        let probability = subset_indices.len() as f64 / total_samples;
-        entropy_sum += probability * subset_entropy;
+// Need to loop on features and check word frequences based on number of total features
+fn calculate_information_gain(data: &Dataset, attribute: &str, att_val: u32) -> f64 {
+    if att_val > 200 {
+        return att_val as f64 / 1000.0;
+    } else if att_val > 100 {
+        return att_val as f64 / 50.0;
     }
-
-    //println!("{}", entropy_s - entropy_sum);
-    // Information Gain
-    entropy_s - entropy_sum
+    att_val as f64
 }
 
-fn choose_best_attribute(data: &Dataset, attributes: &HashSet<String>) -> String {
-    attributes.iter().max_by(|&a, &b| {
-        //println!("{:?},{:?}",a,b);
-        calculate_information_gain(data, &a).partial_cmp(&calculate_information_gain(data, &b)).unwrap()
-    }).cloned().unwrap_or_default()
+// fn calculate_information_gain(data: &Dataset, attribute: &str, att_freq: u32) -> f64 {
+//     let total_samples = data.labels.len() as f64;
+//     let entropy_s = calculate_entropy(&data.labels);
+
+//     // Calculate weighted sum of entropies for each value of the attribute
+//     let mut entropy_sum = 0.0;
+//     let values: HashSet<&String> = data.features.iter().flat_map(|feature| feature.keys()).collect();
+
+//     for value in values {
+//         // Filter the data for samples where the attribute has the specific value
+//         let subset_indices: Vec<usize> = data.features.iter()
+//             .enumerate()
+//             .filter(|(_, feature)| feature.get(attribute) == Some(value))
+//             .map(|(i, _)| i)
+//             .collect();
+
+//         // Calculate word frequencies for the subset
+//         let mut word_frequencies: HashMap<String, u32> = HashMap::new();
+//         for &i in &subset_indices {
+//             for (word, &freq) in &data.features[i] {
+//                 *word_frequencies.entry(word.clone()).or_insert(0) += freq;
+//             }
+//         }
+
+//         // Convert word frequencies to labels for the subset
+//         let subset_labels: Vec<Author> = subset_indices.iter().map(|&i| data.labels[i]).collect();
+//         let subset_entropy = calculate_entropy_with_word_frequencies(&subset_labels, &word_frequencies);
+
+//         // Weighted sum
+//         let probability = subset_indices.len() as f64 / total_samples;
+//         entropy_sum += probability * subset_entropy;
+//     }
+
+//     // Information Gain
+//     entropy_s - entropy_sum
+// }
+
+
+// fn calculate_information_gain(data: &Dataset, attribute: &str) -> f64 {
+//     let total_samples = data.labels.len() as f64;
+//     let entropy_s = calculate_entropy(&data.labels);
+
+//     // Calculate weighted sum of entropies for each value of the attribute
+//     let mut entropy_sum = 0.0;
+//     let values: HashSet<&String> = data.features.iter().flat_map(|feature| feature.keys()).collect();
+
+//     for value in values {
+//         // Filter the data for samples where the attribute has the specific value
+//         let subset_indices: Vec<usize> = data.features.iter()
+//             .enumerate()
+//             .filter(|(_, feature)| feature.get(attribute).map(|v| v.to_string()) == Some(value.to_string()))
+//             .map(|(i, _)| i)
+//             .collect();
+
+//         let subset_labels: Vec<Author> = subset_indices.iter().map(|&i| data.labels[i]).collect();
+//         let subset_entropy = calculate_entropy(&subset_labels);
+
+//         // Weighted sum
+//         let probability = subset_indices.len() as f64 / total_samples;
+//         entropy_sum += probability * subset_entropy;
+//     }
+
+//     // println!("{}", entropy_s - entropy_sum);
+//     // Information Gain
+//     entropy_s - entropy_sum
+// }
+
+fn choose_best_attribute(data: &Dataset, attributes: &HashMap<String, u32>) -> String {
+    attributes.iter().min_by(|&(a_word, a_val), &(b_word, b_val)| {
+        calculate_information_gain(data, a_word, *a_val).partial_cmp(&calculate_information_gain(data, b_word, *b_val)).unwrap_or(Ordering::Equal)
+    }).map(|(word, _)| word.clone()).unwrap_or_default()
 }
 
-pub fn build_decision_tree(data: &Dataset, attributes: &mut HashSet<String>, depth: u32) -> DecisionTreeNode {
+// fn choose_best_attribute(data: &Dataset, attributes: &HashMap<String,u32>) -> String {
+//     attributes.iter().max_by(|&(a_word,a_val), &(b_word,b_val)| {
+
+//         calculate_information_gain(data, &a).partial_cmp(&calculate_information_gain(data, &b)).unwrap()
+//     }).cloned().unwrap_or_default()
+// }
+
+pub fn build_decision_tree(data: &Dataset, attributes: &mut HashMap<String,u32>, depth: u32) -> DecisionTreeNode {
     // If all examples in the subset have the same class label, return a leaf node
     if data.labels.iter().all(|&label| label == Author::Austen) {
         return DecisionTreeNode::Leaf { class_label: Author::Austen };
@@ -149,32 +206,34 @@ pub fn build_decision_tree(data: &Dataset, attributes: &mut HashSet<String>, dep
 
     //println!("{}",best_attribute);
     // Split the dataset based on the chosen attribute
-    let mut subsets: HashMap<String, Dataset> = HashMap::new();
+    let mut subsets: HashMap<u32, Dataset> = HashMap::new();
     for (i, feature) in data.features.iter().enumerate() {
-        let value = feature.get(&best_attribute).map(|v| v.to_string()).unwrap_or_default();
-        // let mut value:String = String::new();
-        // while !attributes.is_empty() {
-        //     if let Some(result) = feature.get(&best_attribute) {
-        //         value=result.to_string();
-        //         // attributes.remove(&best_attribute);
-        //         // println!("{}: {}", best_attribute, value);
-        //         break;
-        //     } else {
-        //         best_attribute = choose_best_attribute(data, attributes);
-        //         attributes.remove(&best_attribute);
-        //     }
-        // }
+        if let Some(value) = feature.get(&best_attribute) {
+            // println!("{}: {}", best_attribute, value);
+            subsets.entry(value.clone()).or_insert_with(|| Dataset {
+                features: Vec::new(),
+                labels: Vec::new(),
+            }).features.push(feature.clone());
+            subsets.get_mut(&value).unwrap().labels.push(data.labels[i]);
+        } else {
+            // println!("{}: {}", best_attribute, 0);
+            subsets.entry(0).or_insert_with(|| Dataset {
+                features: Vec::new(),
+                labels: Vec::new(),
+            }).features.push(feature.clone());
+            subsets.get_mut(&0).unwrap().labels.push(data.labels[i]);
+        }
 
         // println!("{}: {}", best_attribute, value);
-        subsets.entry(value.clone()).or_insert_with(|| Dataset {
-            features: Vec::new(),
-            labels: Vec::new(),
-        }).features.push(feature.clone());
-        subsets.get_mut(&value).unwrap().labels.push(data.labels[i]);
+        // subsets.entry(value.clone()).or_insert_with(|| Dataset {
+        //     features: Vec::new(),
+        //     labels: Vec::new(),
+        // }).features.push(feature.clone());
+        // subsets.get_mut(&value).unwrap().labels.push(data.labels[i]);
     }
 
     // Recursively build child nodes
-    let mut children: HashMap<String, DecisionTreeNode> = HashMap::new();
+    let mut children: HashMap<u32, DecisionTreeNode> = HashMap::new();
     for (value, subset) in subsets {
         children.insert(value, build_decision_tree(&subset, attributes, depth - 1));
     }
@@ -185,18 +244,37 @@ pub fn build_decision_tree(data: &Dataset, attributes: &mut HashSet<String>, dep
     }
 }
 
-pub fn predict_tree(node: &DecisionTreeNode, example: &HashMap<String, u32>) -> Author {
+pub fn predict_tree(node: &DecisionTreeNode, example: &HashMap<String, u32>, word_occurances: u32) -> Author {
     match node {
         DecisionTreeNode::Internal { attribute, children } => {
-            let value = example.get(attribute).map(|v| v.to_string()).unwrap_or_default();
-            if let Some(child) = children.get(&value) {
-                // println!("Here 1");
-                predict_tree(child, example)
+            if let Some(value) = example.get(attribute) {
+                if let Some(child) = children.get(&value) {
+                    // println!("Here 1");
+                    predict_tree(child, example, word_occurances + 1)
+                } else {
+                    // If the attribute value is not found, return a default class label (Austen in this case)
+                    // println!("Here 2");
+                    if let Some(child) = children.get(&word_occurances) {
+                        return predict_tree(child, example, word_occurances+1);
+                    } else {
+                        Author::Austen
+                    }
+                }
             } else {
-                // If the attribute value is not found, return a default class label (Austen in this case)
-                // println!("Here 2");
-                Author::Austen
+                if let Some(child) = children.get(&word_occurances) {
+                    return predict_tree(child, example, word_occurances+1);
+                } else {
+                    return Author::Austen;
+                }
             }
+            // if let Some(child) = children.get(&value) {
+            //     // println!("Here 1");
+            //     predict_tree(child, example)
+            // } else {
+            //     // If the attribute value is not found, return a default class label (Austen in this case)
+            //     // println!("Here 2");
+            //     Author::Austen
+            // }
         }
         DecisionTreeNode::Leaf { class_label } => *class_label,
     }
@@ -206,7 +284,7 @@ pub fn validate_tree(tree: &DecisionTreeNode, validation_data: &Dataset) -> f64 
     let mut correct_predictions = 0;
 
     for (example, true_label) in validation_data.features.iter().zip(&validation_data.labels) {
-        let predicted_label = predict_tree(tree, example);
+        let predicted_label = predict_tree(tree, example, 1);
 
         if predicted_label == *true_label {
             correct_predictions += 1;
@@ -217,13 +295,17 @@ pub fn validate_tree(tree: &DecisionTreeNode, validation_data: &Dataset) -> f64 
     accuracy
 }
 
-pub fn get_attributes(data: &Dataset) -> HashSet<String> {
+pub fn get_attributes(data: &Dataset) -> HashMap<String,u32> {
     // Collect all unique words in the dataset
-    let mut unique_words: HashSet<String> = HashSet::new();
+    let mut unique_words: HashMap<String,u32> = HashMap::new();
 
     for feature in &data.features {
-        for (word, _) in feature {
-            unique_words.insert(word.clone());
+        for (word, value) in feature {
+            if let Some(result) = unique_words.get(word) {
+                unique_words.insert(word.clone(), result + value);
+            } else {
+                unique_words.insert(word.clone(), *value);
+            }
         }
     }
 
