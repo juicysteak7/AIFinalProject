@@ -95,37 +95,37 @@ fn calculate_information_gain(data: &Dataset, attribute: &str, att_val: u32) -> 
     // } else if att_val > 100 {
     //     return att_val as f64 / 50.0;
     // }
-    let mut shelley_val = 0.0;
-    let mut austen_val = 0.0;
+    let mut shelley_val = 0;
+    let mut austen_val = 0;
     for i in 0..data.features.len() { 
-        let mut num_of_words_austen = 0;
-        let mut num_of_words_shelley = 0;
-        for (word,value) in &data.features[i] {
-            if data.labels[i] == Author::Austen {
-                num_of_words_austen+=value;
-                if word == attribute {
-                    austen_val+=*value as f64;
-                }
-            } else {
-                num_of_words_shelley+=value;
-                if word == attribute {
-                    shelley_val+=*value as f64;
-                }
-            }
-        }
-        if shelley_val != 0.0 && num_of_words_shelley != 0 {
-            shelley_val = shelley_val / num_of_words_shelley as f64;
-        }
-        if austen_val != 0.0 && num_of_words_austen != 0 {
-            austen_val = austen_val / num_of_words_austen as f64;
-        }
-        // if let Some(result) = data.features[i].get(attribute) {
+        // let mut num_of_words_austen = 0;
+        // let mut num_of_words_shelley = 0;
+        // for (word,value) in &data.features[i] {
         //     if data.labels[i] == Author::Austen {
-        //         austen_val+=result;
+        //         num_of_words_austen+=value;
+        //         if word == attribute {
+        //             austen_val+=*value as f64;
+        //         }
         //     } else {
-        //         shelley_val+=result;
+        //         num_of_words_shelley+=value;
+        //         if word == attribute {
+        //             shelley_val+=*value as f64;
+        //         }
         //     }
         // }
+        // if shelley_val != 0.0 && num_of_words_shelley != 0 {
+        //     shelley_val = shelley_val / num_of_words_shelley as f64;
+        // }
+        // if austen_val != 0.0 && num_of_words_austen != 0 {
+        //     austen_val = austen_val / num_of_words_austen as f64;
+        // }
+        if let Some(result) = data.features[i].get(attribute) {
+            if data.labels[i] == Author::Austen {
+                austen_val+=result;
+            } else {
+                shelley_val+=result;
+            }
+        }
     }
     let result = shelley_val as f64 - austen_val as f64;
     //println!("{}",result);

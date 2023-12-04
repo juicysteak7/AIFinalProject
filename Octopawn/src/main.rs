@@ -147,7 +147,6 @@ fn main() {
     negamax(&initial_state, &mut tt);
 
     // Write the result to a JSON file
-    println!("{:?}",tt);
     let mut file = File::create("4pawn.json").expect("Unable to create file");
     let json_result = serde_json::to_string_pretty(&tt).expect("JSON serialization failed");
     file.write_all(json_result.as_bytes()).expect("Unable to write to file");
