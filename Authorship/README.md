@@ -36,6 +36,8 @@ All this and I think the highest I achieved was 68%.
 
 It was a fun project but after so many hour I am ready to throw in the towel and start the other part of the project.
 
-In order to run the program, ensure you have rust and cargo installed.
+In order to run this project you must have Rust and Crate installed.
 
-Then use the command cargo run to generate the JSON file of all board states and their solutions.
+You can install them [here](https://www.rust-lang.org/)
+
+Then the command to start the program is cargo run.

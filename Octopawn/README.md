@@ -50,6 +50,8 @@ I found it straight forward which was a relief considering how much work the oth
 
 Negamax continues to be a nice solution to zero sum games.
 
-In order to run the program, ensure you have rust and cargo installed.
+In order to run this project you must have Rust and Crate installed.
 
-Then use the command cargo run to generate the JSON file of all board states and their solutions.
+You can install them [here](https://www.rust-lang.org/)
+
+Then the command to start the program is cargo run.
