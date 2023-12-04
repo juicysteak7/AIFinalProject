@@ -35,3 +35,7 @@ I have tried tuning the depth of the decision tree, changing the attribute decis
 All this and I think the highest I achieved was 68%. 
 
 It was a fun project but after so many hour I am ready to throw in the towel and start the other part of the project.
+
+In order to run the program, ensure you have rust and cargo installed.
+
+Then use the command cargo run to generate the JSON file of all board states and their solutions.
