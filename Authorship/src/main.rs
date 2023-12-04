@@ -1,8 +1,3 @@
-use Authorship;
-
-use std::env;
-
-
 fn main() {
     let mut data_set:Authorship::Dataset = Authorship::Dataset {
         features: Vec::new(),
@@ -18,10 +13,10 @@ fn main() {
             let mut n = 0;
             for paragraph in tokenized_paragraphs {
                 if n < num_of_paragraphs {
-                    data_set.features.push(Authorship::extract_features(&paragraph));
-                    data_set.labels.push(Authorship::label_paragraph(&file_name));
+                    data_set.features.push(Authorship::extract_features(paragraph));
+                    data_set.labels.push(Authorship::label_paragraph(file_name));
                 }
-                n = n+1;
+                n+=1;
             }
         }
         Err(err) => {
@@ -36,10 +31,10 @@ fn main() {
             let mut n = 0;
             for paragraph in tokenized_paragraphs {
                 if n < num_of_paragraphs {
-                    data_set.features.push(Authorship::extract_features(&paragraph));
-                    data_set.labels.push(Authorship::label_paragraph(&file_name));
+                    data_set.features.push(Authorship::extract_features(paragraph));
+                    data_set.labels.push(Authorship::label_paragraph(file_name));
                 }
-                n = n+1;
+                n+=1;
             }
         }
         Err(err) => {
@@ -54,10 +49,10 @@ fn main() {
             let mut n = 0;
             for paragraph in tokenized_paragraphs {
                 if n < num_of_paragraphs {
-                    data_set.features.push(Authorship::extract_features(&paragraph));
-                    data_set.labels.push(Authorship::label_paragraph(&file_name));
+                    data_set.features.push(Authorship::extract_features(paragraph));
+                    data_set.labels.push(Authorship::label_paragraph(file_name));
                 }
-                n = n+1;
+                n += 1;
             }
         }
         Err(err) => {
@@ -72,10 +67,10 @@ fn main() {
             let mut n = 0;
             for paragraph in tokenized_paragraphs {
                 if n < num_of_paragraphs {
-                    data_set.features.push(Authorship::extract_features(&paragraph));
-                    data_set.labels.push(Authorship::label_paragraph(&file_name));
+                    data_set.features.push(Authorship::extract_features(paragraph));
+                    data_set.labels.push(Authorship::label_paragraph(file_name));
                 }
-                n = n+1;
+                n += 1;
             }
         }
         Err(err) => {
@@ -83,15 +78,6 @@ fn main() {
         }
     }
 
-    let mut shelley_num = 0;
-    let mut austen_num = 0;
-    for label in &data_set.labels {
-        if *label == Authorship::Author::Austen {
-            austen_num += 1;
-        } else {
-            shelley_num += 1;
-        }
-    }
     let old_data = data_set.clone();
     let folds = 10;
     let mut overall_accuracy = 0.0;
